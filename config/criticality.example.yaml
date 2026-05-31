@@ -1,0 +1,20 @@
+profiles:
+  # Revenue-critical services — maximum risk weighting
+  - namespace: production-payments
+    level: CRITICAL
+
+  # Core checkout flow
+  - namespace: production-checkout
+    level: HIGH
+
+  # Lower-priority production namespaces
+  - namespace: production-marketing
+    level: MEDIUM
+
+  # Non-production environments — minimal weighting
+  - namespace: staging
+    level: LOW
+  - namespace: development
+    level: LOW
+  - namespace: ci
+    level: LOW

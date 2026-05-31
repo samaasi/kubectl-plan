@@ -1,0 +1,15 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: kubectl-plan-reader-binding
+  labels:
+    app.kubernetes.io/name: kubectl-plan
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: kubectl-plan-reader
+subjects:
+  # Replace with your service account or user identity
+  - kind: User
+    name: YOUR_USERNAME
+    apiGroup: rbac.authorization.k8s.io

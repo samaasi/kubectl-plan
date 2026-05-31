@@ -1,0 +1,32 @@
+ACTION:     scale deployment/payment-api --replicas=0  [namespace: production]
+
+RISK SCORE:       8.7 / 10  ████████░░  HIGH
+CONFIDENCE:        94%      █████████░  (topology + Prometheus)
+UNCERTAINTY:       LOW      (well-instrumented service)
+
+DEPENDENTS:
+  ├─ checkout-service   DIRECT    [99%]
+  │     Evidence: label selector {app: payment-api} matches 3 running pods
+  │
+  ├─ billing-service    DIRECT    [95%]
+  │     Evidence: ingress/payment-ingress routes /api/pay → service/payment-api-svc
+  │
+  └─ invoice-worker     INDIRECT  [70%]
+        Evidence: env.PAYMENT_URL=http://payment-api-svc matches service cluster DNS
+       ~Uncertain: no Prometheus confirmation
+
+UNKNOWN BLAST RADIUS:
+  ⚠ No service mesh CRDs found — Consul/Istio/Envoy service relationships unknown
+  ℹ Run `kubectl plan doctor` to see what instrumentation would increase confidence.
+
+RISK CONTRIBUTORS:
+  +3.0  production namespace   [criticality: HIGH, contains 'prod']
+  +1.8  2 confirmed direct consumers
+  +1.5  Cross-namespace impact
+  +1.4  Ingress exposed (external traffic)
+  ─────
+  = 7.7 / 10
+
+RECOMMENDATION:
+  ⚠ Score 7.7 — do not proceed without review.
+  → kubectl plan why deployment payment-api   for full scoring breakdown.

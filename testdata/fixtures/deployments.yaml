@@ -1,0 +1,109 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: payment-api
+  namespace: production
+  labels:
+    app: payment-api
+    tier: backend
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: payment-api
+  template:
+    metadata:
+      labels:
+        app: payment-api
+        tier: backend
+    spec:
+      containers:
+        - name: payment-api
+          image: payment-api:v1.2.3
+          ports:
+            - containerPort: 8080
+          env:
+            - name: DB_URL
+              value: "postgres://db.data.svc.cluster.local:5432/payments"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: checkout-service
+  namespace: production
+  labels:
+    app: checkout-service
+    tier: backend
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: checkout-service
+  template:
+    metadata:
+      labels:
+        app: checkout-service
+        tier: backend
+    spec:
+      containers:
+        - name: checkout-service
+          image: checkout-service:v2.1.0
+          ports:
+            - containerPort: 8080
+          env:
+            - name: PAYMENT_URL
+              value: "http://payment-api-svc.production.svc.cluster.local:8080"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: billing-service
+  namespace: billing
+  labels:
+    app: billing-service
+    tier: backend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: billing-service
+  template:
+    metadata:
+      labels:
+        app: billing-service
+        tier: backend
+    spec:
+      containers:
+        - name: billing-service
+          image: billing-service:v1.0.5
+          ports:
+            - containerPort: 8080
+          env:
+            - name: PAYMENT_ENDPOINT
+              value: "http://payment-api-svc.production.svc.cluster.local/v1"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: invoice-worker
+  namespace: production
+  labels:
+    app: invoice-worker
+    tier: worker
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: invoice-worker
+  template:
+    metadata:
+      labels:
+        app: invoice-worker
+        tier: worker
+    spec:
+      containers:
+        - name: invoice-worker
+          image: invoice-worker:v1.1.0
+          env:
+            - name: PAYMENT_URL
+              value: "http://payment-api-svc:8080"
