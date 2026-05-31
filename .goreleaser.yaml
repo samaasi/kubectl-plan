@@ -43,9 +43,6 @@ changelog:
 krews:
   - name: plan
     skip_upload: true
-    index:
-      owner: samaasi
-      name: kubectl-plan
     short_description: "Operational decision support for Kubernetes operations"
     description: "Builds a dependency graph and calculates the risk score and blast radius before you scale, restart, or delete a resource."
     homepage: "https://github.com/samaasi/kubectl-plan"
