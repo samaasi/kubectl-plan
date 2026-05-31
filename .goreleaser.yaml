@@ -39,3 +39,13 @@ changelog:
     exclude:
       - '^docs:'
       - '^test:'
+
+krews:
+  - id: plan
+    name: plan
+    short_description: "Operational decision support for Kubernetes operations"
+    description: "Builds a dependency graph and calculates the risk score and blast radius before you scale, restart, or delete a resource."
+    homepage: "https://github.com/samaasi/kubectl-plan"
+    caveats: |
+      Requires read-only RBAC permissions. Run `kubectl apply -f https://raw.githubusercontent.com/samaasi/kubectl-plan/master/deploy/rbac/clusterrole.yaml` to configure.
+
