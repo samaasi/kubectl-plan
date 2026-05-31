@@ -1,4 +1,7 @@
 # Binaries
 /kubectl-plan
 /kubectl-plan.exe
+/coverage.*
+coverage
+.DS_Store
 /dist/
