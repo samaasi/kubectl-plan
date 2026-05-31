@@ -7,10 +7,10 @@ import (
 	"strings"
 
 	"github.com/fatih/color"
-	"github.com/spf13/cobra"
 	"github.com/samaasi/kubectl-plan/internal/analysis"
 	"github.com/samaasi/kubectl-plan/internal/k8s"
 	"github.com/samaasi/kubectl-plan/internal/output"
+	"github.com/spf13/cobra"
 )
 
 var (
