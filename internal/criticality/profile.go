@@ -9,7 +9,7 @@ import (
 )
 
 type ProfileConfig struct {
-	Version  string          `yaml:"version"`
+	Version  string         `yaml:"version"`
 	Profiles []ProfileMatch `yaml:"profiles"`
 }
 
