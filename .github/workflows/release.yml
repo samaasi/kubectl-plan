@@ -4,12 +4,18 @@ on:
   push:
     tags:
       - 'v*'
+    branches:
+      - master
 
 permissions:
   contents: write
 
 jobs:
   goreleaser:
+    # Only run the release job when:
+    # 1. A tag matching v* was pushed, AND
+    # 2. That tag is on the master branch (not develop or any other branch)
+    if: startsWith(github.ref, 'refs/tags/v') && github.event.base_ref == 'refs/heads/master'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Code
@@ -22,11 +28,6 @@ jobs:
         with:
           go-version: '1.22'
           cache: true
-
-      - name: Verify Tag is on Master Branch
-        run: |
-          git fetch origin master
-          git branch -r --contains HEAD | grep -q "origin/master" || (echo "Error: Tag must be pushed on master branch!" && exit 1)
 
       - name: Run GoReleaser
         uses: goreleaser/goreleaser-action@v5
