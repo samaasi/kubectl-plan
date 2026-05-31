@@ -1,4 +1,4 @@
 # Binaries
-kubectl-plan
-kubectl-plan.exe
-dist/
+/kubectl-plan
+/kubectl-plan.exe
+/dist/
