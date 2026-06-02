@@ -54,7 +54,7 @@ func makeReplicaSet(name, ns, deployName string) appsv1.ReplicaSet {
 // TestResolve_deploymentNotFound verifies an unfound deployment still returns a graph.
 func TestResolve_deploymentNotFound(t *testing.T) {
 	data := &k8s.ClusterData{}
-	r := dependency.NewResolver(data)
+	r := dependency.NewResolver(data, nil)
 	graph, err := r.Resolve("deployment", "missing", "default")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -79,7 +79,7 @@ func TestResolve_serviceSelection(t *testing.T) {
 		Services:    []corev1.Service{svc},
 	}
 
-	r := dependency.NewResolver(data)
+	r := dependency.NewResolver(data, nil)
 	graph, err := r.Resolve("deployment", "payment-api", "production")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -134,7 +134,7 @@ func TestResolve_envVarReference(t *testing.T) {
 		Services:    []corev1.Service{svc},
 	}
 
-	r := dependency.NewResolver(data)
+	r := dependency.NewResolver(data, nil)
 	graph, err := r.Resolve("deployment", "payment-api", "production")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -170,7 +170,7 @@ func TestResolve_statefulSet(t *testing.T) {
 		Pods:         []corev1.Pod{pod},
 	}
 
-	r := dependency.NewResolver(data)
+	r := dependency.NewResolver(data, nil)
 	graph, err := r.Resolve("statefulset", "postgres", "data")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)

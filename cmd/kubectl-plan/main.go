@@ -10,6 +10,7 @@ import (
 	"github.com/samaasi/kubectl-plan/internal/analysis"
 	"github.com/samaasi/kubectl-plan/internal/k8s"
 	"github.com/samaasi/kubectl-plan/internal/output"
+	"github.com/samaasi/kubectl-plan/internal/prometheus"
 	"github.com/spf13/cobra"
 )
 
@@ -20,6 +21,9 @@ var (
 	asciiOnly     bool
 	noColor       bool
 	allNamespaces bool
+
+	prometheusURL string
+	lookback      string
 
 	replicas int
 )
@@ -43,6 +47,8 @@ It analyzes dependencies via Kubernetes topology (and optionally Prometheus) to 
 	rootCmd.PersistentFlags().BoolVar(&asciiOnly, "ascii", false, "Disable unicode box drawing characters")
 	rootCmd.PersistentFlags().BoolVar(&noColor, "no-color", false, "Disable terminal color output")
 	rootCmd.PersistentFlags().BoolVar(&allNamespaces, "all-namespaces", false, "Include cross-namespace dependency scanning")
+	rootCmd.PersistentFlags().StringVar(&prometheusURL, "prometheus-url", "", "Prometheus server URL (e.g. http://localhost:9090). If empty, auto-discovery is used")
+	rootCmd.PersistentFlags().StringVar(&lookback, "lookback", "24h", "Time window for Prometheus traffic queries")
 
 	scaleCmd := &cobra.Command{
 		Use:   "scale [KIND] [NAME] --replicas=N",
@@ -80,7 +86,11 @@ It analyzes dependencies via Kubernetes topology (and optionally Prometheus) to 
 			if err != nil {
 				return fmt.Errorf("failed to create k8s client: %w", err)
 			}
-			res, err := analysis.NewEngine(client).Analyze(context.Background(), "why", kind, name)
+			promClient := prometheus.NewClient(prometheusURL, lookback)
+			if prometheusURL == "" {
+				_, _ = promClient.Discover(context.Background(), client)
+			}
+			res, err := analysis.NewEngine(client, promClient).Analyze(context.Background(), "why", kind, name)
 			if err != nil {
 				return fmt.Errorf("analysis failed: %w", err)
 			}
@@ -119,7 +129,13 @@ func runAnalyze(args []string, action string) error {
 	if err != nil {
 		return fmt.Errorf("failed to create k8s client: %w", err)
 	}
-	res, err := analysis.NewEngine(client).Analyze(context.Background(), action, kind, name)
+	
+	promClient := prometheus.NewClient(prometheusURL, lookback)
+	if prometheusURL == "" {
+		_, _ = promClient.Discover(context.Background(), client)
+	}
+
+	res, err := analysis.NewEngine(client, promClient).Analyze(context.Background(), action, kind, name)
 	if err != nil {
 		return fmt.Errorf("analysis failed: %w", err)
 	}
@@ -135,9 +151,19 @@ func runDoctor() error {
 		nsName = client.Namespace
 	}
 
+	promClient := prometheus.NewClient(prometheusURL, lookback)
+	promURL := prometheusURL
+	if apiReachable && promURL == "" {
+		if discoveredURL, err := promClient.Discover(context.Background(), client); err == nil && discoveredURL != "" {
+			promURL = discoveredURL
+		}
+	}
+
 	docResult := &output.DoctorResult{
 		Namespace:           nsName,
 		K8sAPIReachable:     apiReachable,
+		PrometheusReachable: promURL != "",
+		PrometheusURL:       promURL,
 		EstimatedConfidence: 0.65,
 	}
 

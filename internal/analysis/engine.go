@@ -6,15 +6,17 @@ import (
 	"github.com/samaasi/kubectl-plan/internal/criticality"
 	"github.com/samaasi/kubectl-plan/internal/dependency"
 	"github.com/samaasi/kubectl-plan/internal/k8s"
+	"github.com/samaasi/kubectl-plan/internal/prometheus"
 	"github.com/samaasi/kubectl-plan/internal/risk"
 )
 
 type Engine struct {
-	client *k8s.Client
+	client     *k8s.Client
+	promClient *prometheus.Client
 }
 
-func NewEngine(client *k8s.Client) *Engine {
-	return &Engine{client: client}
+func NewEngine(client *k8s.Client, promClient *prometheus.Client) *Engine {
+	return &Engine{client: client, promClient: promClient}
 }
 
 func (e *Engine) Analyze(ctx context.Context, action, targetKind, targetName string) (*AnalysisResult, error) {
@@ -24,7 +26,7 @@ func (e *Engine) Analyze(ctx context.Context, action, targetKind, targetName str
 		return nil, err
 	}
 
-	resolver := dependency.NewResolver(data)
+	resolver := dependency.NewResolver(data, e.promClient)
 	graph, err := resolver.Resolve(targetKind, targetName, e.client.Namespace)
 	if err != nil {
 		return nil, err
@@ -56,8 +58,13 @@ func (e *Engine) Analyze(ctx context.Context, action, targetKind, targetName str
 		overallConfidence = maxConf
 	}
 
+	promAvailable := false
+	if e.promClient != nil && e.promClient.IsReachable() {
+		promAvailable = true
+	}
+
 	dataSources := DataSources{
-		PrometheusAvailable: false,
+		PrometheusAvailable: promAvailable,
 		ServiceMeshDetected: false,
 		K8sAPIAvailable:     true,
 	}

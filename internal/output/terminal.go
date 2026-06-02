@@ -14,6 +14,8 @@ import (
 type DoctorResult struct {
 	Namespace           string
 	K8sAPIReachable     bool
+	PrometheusReachable bool
+	PrometheusURL       string
 	EstimatedConfidence float64
 }
 
@@ -182,7 +184,11 @@ func (r *Renderer) RenderWhy(res *analysis.AnalysisResult) error {
 
 	fmt.Fprintln(r.writer, bold.Sprint("CONFIDENCE SOURCES:"))
 	fmt.Fprintln(r.writer, "  ✓ Kubernetes topology    (label selectors, ingress routing, owner references)")
-	fmt.Fprintln(r.writer, "  ? Prometheus traffic     (Prometheus integration is inactive/not available)")
+	if res.DataSources.PrometheusAvailable {
+		fmt.Fprintln(r.writer, "  ✓ Prometheus traffic     (Live traffic metrics)")
+	} else {
+		fmt.Fprintln(r.writer, "  ? Prometheus traffic     (Prometheus integration is inactive/not available)")
+	}
 	fmt.Fprintln(r.writer)
 
 	fmt.Fprintln(r.writer, bold.Sprint("UNKNOWN BLAST RADIUS:"))
@@ -206,8 +212,12 @@ func (r *Renderer) RenderDoctor(res *DoctorResult) error {
 		fmt.Fprintln(r.writer, "  ✗ Kubernetes API          unreachable")
 	}
 
-	fmt.Fprintln(r.writer, "  ✗ Prometheus              not integrated/configured [Week 1 MVP]")
-	fmt.Fprintln(r.writer, "                            Confidence boost: +0%")
+	if res.PrometheusReachable {
+		fmt.Fprintf(r.writer, "  ✓ Prometheus              %s\n", res.PrometheusURL)
+	} else {
+		fmt.Fprintln(r.writer, "  ✗ Prometheus              not found — topology-only scoring active")
+		fmt.Fprintln(r.writer, "                            Run with --prometheus-url to connect manually")
+	}
 	fmt.Fprintln(r.writer, "  ✗ Istio / Service Mesh    not detected")
 	fmt.Fprintln(r.writer, "  ✗ OpenTelemetry           not detected")
 	fmt.Fprintln(r.writer, "  ✗ Historical records      no records store found")
@@ -226,7 +236,9 @@ func (r *Renderer) RenderDoctor(res *DoctorResult) error {
 	)
 
 	fmt.Fprintln(r.writer, bold.Sprint("TO IMPROVE CONFIDENCE:"))
-	fmt.Fprintln(r.writer, "  → Integrate Prometheus data source (v0.2)")
+	if !res.PrometheusReachable {
+		fmt.Fprintln(r.writer, "  → Provide Prometheus URL to enable traffic evidence (e.g. --prometheus-url=http://...)")
+	}
 	fmt.Fprintln(r.writer, "  → Install Istio or Linkerd for traffic topology evidence (v0.3)")
 	fmt.Fprintln(r.writer, "  → Create historical record store (v0.4)")
 

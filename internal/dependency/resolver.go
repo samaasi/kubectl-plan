@@ -1,20 +1,23 @@
 package dependency
 
 import (
+	"context"
 	"fmt"
 	"strings"
 
 	"github.com/samaasi/kubectl-plan/internal/k8s"
+	"github.com/samaasi/kubectl-plan/internal/prometheus"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 )
 
 type Resolver struct {
-	data *k8s.ClusterData
+	data       *k8s.ClusterData
+	promClient *prometheus.Client
 }
 
-func NewResolver(data *k8s.ClusterData) *Resolver {
-	return &Resolver{data: data}
+func NewResolver(data *k8s.ClusterData, promClient *prometheus.Client) *Resolver {
+	return &Resolver{data: data, promClient: promClient}
 }
 
 func (r *Resolver) Resolve(targetKind, targetName, targetNamespace string) (*DependencyGraph, error) {
@@ -42,7 +45,37 @@ func (r *Resolver) Resolve(targetKind, targetName, targetNamespace string) (*Dep
 	r.resolvePDBs(graph, targetNamespace, targetPods)
 	r.resolveHPAs(graph, targetNamespace, targetNode)
 
+	r.enrichWithTrafficData(graph)
+
 	return graph, nil
+}
+
+func (r *Resolver) enrichWithTrafficData(graph *DependencyGraph) {
+	if r.promClient == nil || !r.promClient.IsReachable() {
+		return
+	}
+	
+	// We only want to enrich edges that flow into the target (RelSelects, RelRoutes, RelEnvRef, RelVolumeRef)
+	// Actually, traffic usually flows FROM the dependent TO the target.
+	for i, edge := range graph.Edges {
+		if edge.Relationship == RelOwns {
+			continue // structural, no traffic needed
+		}
+
+		// Example: from dependent node to target
+		fromParts := strings.Split(edge.From, "/")
+		
+		rate, err := r.promClient.GetTrafficRate(context.Background(), fromParts[1], graph.Target.Name)
+		if err == nil && rate > 0 {
+			graph.Edges[i].Confidence = 0.99
+			graph.Edges[i].Evidence = append(graph.Edges[i].Evidence, Evidence{
+				Type:        EvidencePrometheus,
+				Source:      SourcePrometheus,
+				Description: fmt.Sprintf("%.2f req/sec · destination_service=%s · Prometheus", rate, graph.Target.Name),
+				Confidence:  0.99,
+			})
+		}
+	}
 }
 
 func (r *Resolver) findTargetNode(targetKind, targetName, targetNamespace string) Node {

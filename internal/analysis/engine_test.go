@@ -27,7 +27,7 @@ func TestEngine_Analyze(t *testing.T) {
 		Namespace: "production",
 	}
 
-	engine := analysis.NewEngine(client)
+	engine := analysis.NewEngine(client, nil)
 	res, err := engine.Analyze(context.Background(), "scale --replicas=0", "deployment", "payment-api")
 
 	if err != nil {
