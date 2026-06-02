@@ -373,67 +373,11 @@ Fully deterministic. No ML. Reproducible given the same cluster state. Full docu
 
 ## Roadmap
 
-### ✅ v0.1 — Core _(current)_
-
-> A working `kubectl plan` plugin that delivers risk output in seconds with zero external dependencies.
-
-| Capability | Status |
-|---|---|
-| `kubectl plan scale` | ✅ Shipped |
-| `kubectl plan restart` | ✅ Shipped |
-| `kubectl plan why` | ✅ Shipped |
-| `kubectl plan doctor` | ✅ Shipped |
-| `kubectl plan delete` | 🔜 In progress |
-| Dependency engine (K8s API — 8 resolution steps) | ✅ Shipped |
-| Risk scoring (deterministic weighted rules) | ✅ Shipped |
-| Uncertainty score (separate axis from risk) | ✅ Shipped |
-| Namespace criticality profiles | ✅ Shipped |
-| Terminal / JSON output renderer | ✅ Shipped |
-| RBAC manifests (read-only ClusterRole) | ✅ Shipped |
-| GoReleaser multi-platform distribution | ✅ Shipped |
-
----
-
-### 🔄 v0.2 — Observability Integration
-
-> Replace topological inference with real traffic evidence from Prometheus.
-
-- Auto-discover Prometheus in cluster
-- Named PromQL builders for traffic, error rate, P99 latency
-- Evidence enrichment: upgrade topology edges with observed traffic (confidence → 0.99)
-- Discover Prometheus-only dependencies invisible to topology analysis
-- Graceful degradation: topology-only mode when Prometheus is absent
-
----
-
-### 🔄 v0.3 — GitOps Integration
-
-> Shift risk analysis left into PR workflows and manifest diffs.
-
-- `kubectl plan manifest ./k8s/` — diff manifests vs live cluster, run analysis per changed resource
-- ArgoCD PreSync resource hook + PR comment posting
-- GitHub Actions integration (`kubectl-plan/action@v1`)
-- Flux notification provider
-
----
-
-### 🔄 v0.4 — Historical Impact Memory
-
-> Stop inferring. Start remembering.
-
-- Append-only local history store (`~/.kubectl-plan/history.jsonl`)
-- `kubectl plan history deployment/payment-api` — surface past operations on same target
-- Historical evidence in risk output: "Previous scale 3→1 caused +32% latency"
-
----
-
-### 🔄 v1.0 — Stable + Admission Controller _(opt-in)_
-
-> Enforce risk thresholds at the API server level for teams that require it.
-
-- `ValidatingAdmissionWebhook` server with configurable risk threshold
-- cert-manager integration for TLS
-- Stability guarantee: API compatibility from this release forward
+- [x] **v0.1 — Core**: Core CLI commands (`scale`, `restart`, `why`, `doctor`), dependency graph, risk/uncertainty scoring, RBAC.
+- [ ] **v0.2 — Observability Integration**: Auto-discover Prometheus, PromQL builders, traffic evidence enrichment.
+- [ ] **v0.3 — GitOps Integration**: Manifest analysis (`kubectl plan manifest`), ArgoCD/Flux hooks, GitHub Actions.
+- [ ] **v0.4 — Historical Impact Memory**: Local history store (`history` command), historical evidence in risk scoring.
+- [ ] **v1.0 — Stable + Admission Controller**: `ValidatingAdmissionWebhook`, cert-manager integration, stable API.
 
 ---
 
