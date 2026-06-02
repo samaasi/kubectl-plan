@@ -375,7 +375,7 @@ Fully deterministic. No ML. Reproducible given the same cluster state. Full docu
 
 - [x] **v0.1 — Core**: Core CLI commands (`scale`, `restart`, `why`, `doctor`), dependency graph, risk/uncertainty scoring, RBAC.
 - [x] **v0.2 — Observability Integration**: Auto-discover Prometheus, PromQL builders, traffic evidence enrichment.
-- [ ] **v0.3 — GitOps Integration**: Manifest analysis (`kubectl plan manifest`), ArgoCD/Flux hooks, GitHub Actions.
+- [x] **v0.3 — GitOps Integration**: Manifest analysis (`kubectl plan manifest`), ArgoCD/Flux hooks, GitHub Actions.
 - [ ] **v0.4 — Historical Impact Memory**: Local history store (`history` command), historical evidence in risk scoring.
 - [ ] **v1.0 — Stable + Admission Controller**: `ValidatingAdmissionWebhook`, cert-manager integration, stable API.
 

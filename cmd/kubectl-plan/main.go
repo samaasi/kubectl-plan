@@ -9,6 +9,7 @@ import (
 	"github.com/fatih/color"
 	"github.com/samaasi/kubectl-plan/internal/analysis"
 	"github.com/samaasi/kubectl-plan/internal/k8s"
+	"github.com/samaasi/kubectl-plan/internal/manifest"
 	"github.com/samaasi/kubectl-plan/internal/output"
 	"github.com/samaasi/kubectl-plan/internal/prometheus"
 	"github.com/spf13/cobra"
@@ -26,6 +27,7 @@ var (
 	lookback      string
 
 	replicas int
+	filename string
 )
 
 func main() {
@@ -102,6 +104,20 @@ It analyzes dependencies via Kubernetes topology (and optionally Prometheus) to 
 		},
 	}
 
+	manifestCmd := &cobra.Command{
+		Use:     "manifest -f [FILENAME]",
+		Short:   "Analyze the risk of applying a manifest file",
+		Example: `  kubectl plan manifest -f deployment.yaml`,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			if filename == "" {
+				return fmt.Errorf("must specify a filename with -f or --filename")
+			}
+			return runManifest(filename)
+		},
+	}
+	manifestCmd.Flags().StringVarP(&filename, "filename", "f", "", "Path to the Kubernetes YAML manifest")
+	_ = manifestCmd.MarkFlagRequired("filename")
+
 	doctorCmd := &cobra.Command{
 		Use:   "doctor",
 		Short: "Probes data sources and scores readiness",
@@ -113,6 +129,7 @@ It analyzes dependencies via Kubernetes topology (and optionally Prometheus) to 
 	rootCmd.AddCommand(scaleCmd)
 	rootCmd.AddCommand(restartCmd)
 	rootCmd.AddCommand(whyCmd)
+	rootCmd.AddCommand(manifestCmd)
 	rootCmd.AddCommand(doctorCmd)
 
 	if err := rootCmd.Execute(); err != nil {
@@ -140,6 +157,61 @@ func runAnalyze(args []string, action string) error {
 		return fmt.Errorf("analysis failed: %w", err)
 	}
 	return output.NewRenderer(outputFormat, os.Stdout, asciiOnly).Render(res)
+}
+
+func runManifest(file string) error {
+	resources, err := manifest.ParseFile(file)
+	if err != nil {
+		return fmt.Errorf("failed to parse manifest: %w", err)
+	}
+
+	if len(resources) == 0 {
+		return fmt.Errorf("no valid kubernetes resources found in %s", file)
+	}
+
+	client, err := k8s.NewClient(kubeContext, namespace)
+	if err != nil {
+		return fmt.Errorf("failed to create k8s client: %w", err)
+	}
+
+	promClient := prometheus.NewClient(prometheusURL, lookback)
+	if prometheusURL == "" {
+		_, _ = promClient.Discover(context.Background(), client)
+	}
+
+	engine := analysis.NewEngine(client, promClient)
+	renderer := output.NewRenderer(outputFormat, os.Stdout, asciiOnly)
+
+	for _, res := range resources {
+		// Use namespace from manifest if specified, otherwise fallback to CLI/context namespace
+		ns := namespace
+		if res.Namespace != "" {
+			ns = res.Namespace
+		}
+
+		// Recreate client for specific namespace if it differs
+		targetClient := client
+		if ns != client.Namespace {
+			targetClient, _ = k8s.NewClient(kubeContext, ns)
+			engine = analysis.NewEngine(targetClient, promClient)
+		}
+
+		result, err := engine.Analyze(context.Background(), "apply", res.Kind, res.Name)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "failed to analyze %s/%s: %v\n", res.Kind, res.Name, err)
+			continue
+		}
+
+		if err := renderer.Render(result); err != nil {
+			return err
+		}
+		// Add some spacing between resources if not JSON
+		if outputFormat != "json" {
+			fmt.Println()
+		}
+	}
+
+	return nil
 }
 
 func runDoctor() error {
